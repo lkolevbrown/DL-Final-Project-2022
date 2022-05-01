@@ -39,7 +39,6 @@ This method is used to load patient molecular profile data into pandas dataframe
 @return response: the patient labels (yes or no cancer) [num_patients, 1] (PANDAS?)
 @return samples: the patient names (really barcode tag numbers) [num_patients]
 @return genes: the set of genes that were present in both selected_genes and the patient dataset
-
 """
 def load_data(filename, selected_genes=None):
 
@@ -121,7 +120,7 @@ def load_CNV_burden(filename=gene_final_no_silent_no_intron):
     return x, response, samples, cols
 
 
-def load_data_type(data_type='mut', cnv_levels=5, cnv_filter_single_event=True, mut_binary=False, selected_genes=None):
+def load_data_type(data_type='gene', cnv_levels=5, cnv_filter_single_event=True, mut_binary=False, selected_genes=None):
     logging.info('loading {}'.format(data_type))
     if data_type == 'TMB':
         x, response, info, genes = load_TMB(gene_important_mutations_only)
@@ -294,6 +293,7 @@ This class is a wrapper and loader for the desired input/output patient data.
 ^see load_data_type() for more options 
 @param selected_genes : string | list: if list, assumed to be all the desired genes; if string, assumed to be the filepath to the csv of desired genes
 @param shuffle : boolean : whether or not the shuffle the loaded input
+@param selected_samples : string : a file containing only the samples (input pateint data) that are desired
 """
 class ProstateDataPaper():
 
@@ -426,14 +426,27 @@ class ProstateDataPaper():
             y = y['response'].values
             x = x.values
 
+        """
+        Initialize instance variables
+        x represents the patient gene data
+        y represents the labels for the patients
+        info represents the patient names
+        columns represents the columns present inside the document (i.e. specific gene mutations, TMB, CNV)
+        """
         self.x = x
         self.y = y
         self.info = rows
         self.columns = cols
 
+    """
+    Return instance variables
+    """
     def get_data(self):
         return self.x, self.y, self.info, self.columns
 
+    """
+    Split instance variable data into trianing, validation, and testing splits
+    """
     def get_train_validate_test(self):
         info = self.info
         x = self.x
