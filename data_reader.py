@@ -478,14 +478,17 @@ class ProstateDataPaper():
         ind_validate = info.isin(info_validate)
         ind_test = info.isin(info_test)
 
+        #split patient data
         x_train = x[ind_train]
         x_test = x[ind_test]
         x_validate = x[ind_validate]
 
+        #split patient labels
         y_train = y[ind_train]
         y_test = y[ind_test]
         y_validate = y[ind_validate]
 
+        #split patient id's
         info_train = info[ind_train]
         info_test = info[ind_test]
         info_validate = info[ind_validate]
