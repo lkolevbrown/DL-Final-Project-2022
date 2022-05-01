@@ -456,6 +456,8 @@ class ProstateDataPaper():
         x = self.x
         y = self.y
         columns = self.columns
+
+        #path is _database/prostate/splits
         splits_path = join(PROSTATE_DATA_PATH, 'splits')
 
         #assuming that there are csv files containing the id's of the samples desired for the training, validation and testing sets
@@ -466,7 +468,7 @@ class ProstateDataPaper():
         testing_set = pd.read_csv(join(splits_path, 'test_set.csv'))
 
         #use set intersection to get desired training, validation, and testing samples
-        #use list for iteration
+        #use list for slicing
         info_train = list(set(info).intersection(training_set.id))
         info_validate = list(set(info).intersection(validation_set.id))
         info_test = list(set(info).intersection(testing_set.id))
