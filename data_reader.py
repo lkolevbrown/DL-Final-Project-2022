@@ -440,12 +440,16 @@ class ProstateDataPaper():
 
     """
     Return instance variables
+    @return x represents the patient gene data
+    @return y represents the labels for the patients
+    @return info represents the patient names
+    @return columns represents the columns present inside the document (i.e. specific gene mutations, TMB, CNV)
     """
     def get_data(self):
         return self.x, self.y, self.info, self.columns
 
     """
-    Split instance variable data into trianing, validation, and testing splits
+    Get training, validation, and testing splits
     """
     def get_train_validate_test(self):
         info = self.info
@@ -454,16 +458,20 @@ class ProstateDataPaper():
         columns = self.columns
         splits_path = join(PROSTATE_DATA_PATH, 'splits')
 
+        #assuming that there are csv files containing the id's of the samples desired for the training, validation and testing sets
         training_file = 'training_set_{}.csv'.format(self.training_split)
         training_set = pd.read_csv(join(splits_path, training_file))
 
         validation_set = pd.read_csv(join(splits_path, 'validation_set.csv'))
         testing_set = pd.read_csv(join(splits_path, 'test_set.csv'))
 
+        #use set intersection to get desired training, validation, and testing samples
+        #use list for iteration
         info_train = list(set(info).intersection(training_set.id))
         info_validate = list(set(info).intersection(validation_set.id))
         info_test = list(set(info).intersection(testing_set.id))
 
+        #get indices
         ind_train = info.isin(info_train)
         ind_validate = info.isin(info_validate)
         ind_test = info.isin(info_test)
