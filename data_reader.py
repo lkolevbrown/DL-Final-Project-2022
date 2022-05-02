@@ -36,7 +36,7 @@ This method is used to load patient molecular profile data into pandas dataframe
 @param filename: the file to load patient data from; assumes the response filepath
 @param selected_genes: the genes to selectively keep from patient data
 @return x: the patient profiles with only the selected_genes and no labels with shape [num_patients, num_genes]
-@return response: the patient labels (yes or no cancer) [num_patients, 1] (PANDAS?)
+@return response: the patient labels (primary or metastatic prostate cancer) [num_patients, 1] (PANDAS?)
 @return samples: the patient names (really barcode tag numbers) [num_patients]
 @return genes: the set of genes that were present in both selected_genes and the patient dataset
 """
@@ -89,7 +89,7 @@ def load_data(filename, selected_genes=None):
 TMB: Tumor Mutational Burden
 Effectively, find the TMB by finding the number of mutations a patient has, take some kind of log
 @return x: the patient's TMB np array [num ]
-@return response: the patient labels (yes or no cancer) [num_patients, 1] (numpy array)
+@return response: the patient labels (primary or metastatic prostate cancer) [num_patients, 1] (numpy array)
 @return samples: the patient names (really barcode tag numbers) [num_patients]
 @return genes: the set of genes that were present in both selected_genes and the patient dataset
 """
