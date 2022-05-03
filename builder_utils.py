@@ -4,7 +4,7 @@ import logging
 import numpy as np
 import pandas as pd
 from keras.layers import Dense, Dropout, Activation, BatchNormalization, multiply
-from keras.regularizers import l2
+from tensorflow.keras.regularizers import L2
 
 # from data.pathways.pathway_loader import get_pathway_files
 from data.pathways.reactome import ReactomeNetwork
@@ -84,7 +84,7 @@ def shuffle_genes_map(mapp):
 
 
 class PNet(tf.keras.Model):
-    def __init__(self, features, genes, n_hidden_layers, direction, activation, activation_decision, w_reg,
+    def __init__(self, features, genes, direction, activation, activation_decision, w_reg,
              w_reg_outcomes, dropout, sparse=True, add_unk_genes, batch_normal, kernel_initializer, use_bias=False,
              shuffle_genes=False, attention=False, dropout_testing=False, non_neg=False, sparse_first_layer=True):
         feature_names = {}
@@ -103,11 +103,37 @@ class PNet(tf.keras.Model):
         w_reg0 = w_reg[0]
         w_reg_outcome0 = w_reg_outcomes[0]
         w_reg_outcome1 = w_reg_outcomes[1]
-        reg_l = l2
         constraints = {}
 
-        self.layer1 = Diagonal(n_genes, input_shape=(n_features,), activation=activation, W_regularizer=l2(w_reg0),
+        self.layer1 = Diagonal(n_genes, input_shape=(n_features,), activation=activation, W_regularizer=L2(w_reg0),
                                   use_bias=use_bias, name='h0', kernel_initializer=kernel_initializer, **constraints)
+
+        self.dense1 = Dense(1, activation='linear', name='o_linear{}'.format(0), W_regularizer=L2(w_reg_outcome0))
+        self.drop2 = Dropout(dropout[0], name='dropout_{}'.format(0))
+        self.activation1 = Activation(activation=activation_decision, name='o{}'.format(1))
+
+
+        self.mapp = get_layer_maps(genes, 1, direction, add_unk_genes)[0]
+
+
+        w_reg = w_regs[i]
+        w_reg_outcome = w_reg_outcomes[i]
+        # dropout2 = dropouts[i]
+        dropout = dropouts[1]
+        names = mapp.index
+        # names = list(mapp.index)
+        mapp = mapp.values
+        if shuffle_genes in ['all', 'pathways']:
+            mapp = shuffle_genes_map(mapp)
+        n_genes, n_pathways = mapp.shape
+        logging.info('n_genes, n_pathways {} {} '.format(n_genes, n_pathways))
+        # print 'map # ones {}'.format(np.sum(mapp))
+        print ('layer {}, dropout  {} w_reg {}'.format(1, dropout, w_reg))
+        layer_name = 'h{}'.format(1)
+        self.hidden_layer = SparseTF(n_pathways, mapp, activation=activation, W_regularizer=L2(w_reg),
+                                    name=layer_name, kernel_initializer=kernel_initializer,
+                                    use_bias=use_bias, **constraints)
+
 
     def call(self, inputs):
         pass
