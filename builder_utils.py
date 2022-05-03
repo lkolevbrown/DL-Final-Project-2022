@@ -1,6 +1,7 @@
 import itertools
 import logging
 
+import tensorflow as tf
 import numpy as np
 import pandas as pd
 from keras.layers import Dense, Dropout, Activation, BatchNormalization, multiply
@@ -24,14 +25,10 @@ def get_map_from_layer(layer_dict):
     mat = np.zeros((n_pathways, n_genes))
     for p, gs in layer_dict.items():
         g_inds = [genes.index(g) for g in gs]
-        p_ind = pathways.index(p)
+        p_ind = list(pathways).index(p)
         mat[p_ind, g_inds] = 1
 
     df = pd.DataFrame(mat, index=pathways, columns=genes)
-    # for k, v in layer_dict.items():
-    #     print k, v
-    #     df.loc[k,v] = 1
-    # df= df.fillna(0)
     return df.T
 
 
@@ -85,8 +82,9 @@ def shuffle_genes_map(mapp):
 
 class PNet(tf.keras.Model):
     def __init__(self, features, genes, direction, activation, activation_decision, w_reg,
-             w_reg_outcomes, dropout, sparse=True, add_unk_genes, batch_normal, kernel_initializer, use_bias=False,
+             w_reg_outcomes, dropout, sparse, add_unk_genes, kernel_initializer, use_bias=False,
              shuffle_genes=False, attention=False, dropout_testing=False, non_neg=False, sparse_first_layer=True):
+        super(PNet, self).__init__()
         n_features = len(features)
         n_genes = len(genes)
 
@@ -107,16 +105,19 @@ class PNet(tf.keras.Model):
         self.layer1 = Diagonal(n_genes, input_shape=(n_features,), activation=activation, W_regularizer=L2(w_reg0),
                                   use_bias=use_bias, name='h0', kernel_initializer=kernel_initializer, **constraints)
 
-        self.dense1 = Dense(1, activation='linear', name='o_linear{}'.format(0), W_regularizer=L2(w_reg_outcome0))
+        self.dense1 = Dense(1, activation='linear', name='o_linear{}'.format(0), activity_regularizer=L2(w_reg_outcome0))
         self.drop1 = Dropout(dropout[0], name='dropout_{}'.format(0))
         self.activation1 = Activation(activation=activation_decision, name='o{}'.format(1))
 
 
-        self.mapp = get_layer_maps(genes, 1, direction, add_unk_genes)[0]
+        mapp = get_layer_maps(genes, 1, direction, add_unk_genes)[0]
 
+        w_regs = w_reg[1:]
+        w_reg_outcomes = w_reg_outcomes[1:]
+        dropouts = dropout[1:]
 
-        w_reg = w_regs[i]
-        w_reg_outcome = w_reg_outcomes[i]
+        w_reg = w_regs[1]
+        w_reg_outcome = w_reg_outcomes[1]
         # dropout2 = dropouts[i]
         dropout = dropouts[1]
         names = mapp.index
@@ -133,9 +134,9 @@ class PNet(tf.keras.Model):
                                     name=layer_name, kernel_initializer=kernel_initializer,
                                     use_bias=use_bias, **constraints)
 
-        self.dense2 = Dense(1, activation='linear', name='o_linear{}'.format(i + 2), W_regularizer=L2(w_reg_outcome))
-        self.activation2 = Activation(activation=activation_decision, name='o{}'.format(i + 2))
-        self.drop2 = Dropout(dropout, name='dropout_{}'.format(i + 1))
+        self.dense2 = Dense(1, activation='linear', name='o_linear{}'.format(1 + 2), activity_regularizer=L2(w_reg_outcome))
+        self.activation2 = Activation(activation=activation_decision, name='o{}'.format(1 + 2))
+        self.drop2 = Dropout(dropout, name='dropout_{}'.format(1 + 1))
 
 
     def call(self, inputs, training=False):
@@ -166,7 +167,7 @@ class PNet(tf.keras.Model):
 
 
 def get_pnet(inputs, features, genes, n_hidden_layers, direction, activation, activation_decision, w_reg,
-             w_reg_outcomes, dropout, sparse=True, add_unk_genes, batch_normal, kernel_initializer, use_bias=False,
+             w_reg_outcomes, dropout, sparse, add_unk_genes, batch_normal, kernel_initializer, use_bias=False,
              shuffle_genes=False, attention=False, dropout_testing=False, non_neg=False, sparse_first_layer=True):
     feature_names = {}
     n_features = len(features)
