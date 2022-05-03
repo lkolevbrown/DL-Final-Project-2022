@@ -87,7 +87,6 @@ class PNet(tf.keras.Model):
     def __init__(self, features, genes, direction, activation, activation_decision, w_reg,
              w_reg_outcomes, dropout, sparse=True, add_unk_genes, batch_normal, kernel_initializer, use_bias=False,
              shuffle_genes=False, attention=False, dropout_testing=False, non_neg=False, sparse_first_layer=True):
-        feature_names = {}
         n_features = len(features)
         n_genes = len(genes)
 
@@ -109,7 +108,7 @@ class PNet(tf.keras.Model):
                                   use_bias=use_bias, name='h0', kernel_initializer=kernel_initializer, **constraints)
 
         self.dense1 = Dense(1, activation='linear', name='o_linear{}'.format(0), W_regularizer=L2(w_reg_outcome0))
-        self.drop2 = Dropout(dropout[0], name='dropout_{}'.format(0))
+        self.drop1 = Dropout(dropout[0], name='dropout_{}'.format(0))
         self.activation1 = Activation(activation=activation_decision, name='o{}'.format(1))
 
 
@@ -134,9 +133,33 @@ class PNet(tf.keras.Model):
                                     name=layer_name, kernel_initializer=kernel_initializer,
                                     use_bias=use_bias, **constraints)
 
+        self.dense2 = Dense(1, activation='linear', name='o_linear{}'.format(i + 2), W_regularizer=L2(w_reg_outcome))
+        self.activation2 = Activation(activation=activation_decision, name='o{}'.format(i + 2))
+        self.drop2 = Dropout(dropout, name='dropout_{}'.format(i + 1))
 
-    def call(self, inputs):
-        pass
+
+    def call(self, inputs, training=False):
+        outcome = self.layer1(inputs)
+
+        decision_outcomes = []
+
+        decision_outcome = self.dense1(outcome)
+
+        if (training):
+            outcome = self.drop1(outcome, training=training)
+
+        decision_outcome = self.activation1(decision_outcome)
+        decision_outcomes.append(decision_outcome)
+
+        outcome = self.hidden_layer(outcome)
+
+        decision_outcome = self.dense2(outcome)
+        decision_outcome = self.activation2(decision_outcome)
+        decision_outcomes.append(decision_outcome)
+        if (training):
+            outcome = self.drop2(outcome, training=dropout_testing)
+
+        return outcome, decision_outcomes
 
     def loss(self, probs, labels):
         pass
