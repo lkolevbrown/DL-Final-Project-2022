@@ -201,66 +201,10 @@ class SparseTF(Layer):
         base_config = super(SparseTF, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
-    # def call(self, inputs):
-    #     print self.kernel.shape, inputs.shape
-    #     tt= tf.sparse.transpose(self.kernel)
-    #     output = tf.sparse.matmul(tt, tf.transpose(inputs ))
-    #     return tf.transpose(output)
-
     def compute_output_shape(self, input_shape):
         return (input_shape[0], self.units)
 
-from scipy.sparse import csr_matrix
-
-
-class RandomWithMap(Initializer):
-    """Initializer that generates tensors initialized to random array.
-    """
-
-    def __init__(self, mapp):
-        self.map = mapp
-
-    def __call__(self, shape, dtype=None):
-        map_sparse = csr_matrix(self.map)
-        # init = np.random.rand(*map_sparse.data.shape)
-        init = np.random.normal(10.0, 1., *map_sparse.data.shape)
-        print ('connection map data shape {}'.format(map_sparse.data.shape))
-        # init = np.random.randn(*map_sparse.data.shape).astype(np.float32) * np.sqrt(2.0 / (map_sparse.data.shape[0]))
-        initializers.glorot_uniform().__call__()
-        map_sparse.data = init
-        return K.variable(map_sparse.toarray())
-
-
-class L1L2_with_map(Regularizer):
-    """Regularizer for L1 and L2 regularization.
-    # Arguments
-        l1: Float; L1 regularization factor.
-        l2: Float; L2 regularization factor.
-    """
-
-    def __init__(self, mapp, l1=0., l2=0.):
-        self.l1 = K.cast_to_floatx(l1)
-        self.l2 = K.cast_to_floatx(l2)
-        self.connection_map = mapp
-
-    def __call__(self, x):
-
-        # x_masked = x *self.connection_map.astype(theano.config.floatX)
-        x_masked = x * self.connection_map.astype(K.floatx())
-        regularization = 0.
-        if self.l1:
-            regularization += K.sum(self.l1 * K.abs(x_masked))
-        if self.l2:
-            regularization += K.sum(self.l2 * K.square(x_masked))
-        return regularization
-
-    def get_config(self):
-        return {'l1': float(self.l1),
-                'l2': float(self.l2)}
-
-
 from keras import backend as K
-
 
 # taken from https://stackoverflow.com/questions/43547402/how-to-calculate-f1-macro-in-keras
 def f1(y_true, y_pred):
