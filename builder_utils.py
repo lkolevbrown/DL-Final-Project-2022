@@ -85,11 +85,12 @@ class PNet(tf.keras.Model):
              shuffle_genes=False, attention=False, dropout_testing=False, non_neg=False, sparse_first_layer=True):
         super(PNet, self).__init__()
 
+        self.optimizer = tf.keras.optimizers.Adam(learning_rate=0.01)
+
         n_features = len(features)
         n_genes = len(genes)
 
-        self.layer1 = Diagonal(n_genes, input_shape=(n_features,), activation=activation,
-                                  use_bias=use_bias, name='h0', kernel_initializer=kernel_initializer)
+        self.layer1 = Diagonal(n_genes, input_shape=(n_features,), activation=activation, use_bias=use_bias, name='h0', kernel_initializer=kernel_initializer)
 
         self.dense1 = Dense(1, activation='linear', name='o_linear{}'.format(0))
         self.drop1 = Dropout(dropout, name='dropout_{}'.format(0))
@@ -248,7 +249,7 @@ class PNet(tf.keras.Model):
 
         losses = []
         bce = tf.keras.losses.BinaryCrossentropy(from_logits=False)
-        for i in tqdm(range(len(probs))):
+        for i in range(len(probs)):
             losses.append(bce(labels, tf.squeeze(probs[i])))
         
         return tf.math.reduce_sum(tf.math.multiply(losses, loss_weights))

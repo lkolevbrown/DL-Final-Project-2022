@@ -62,7 +62,7 @@ class Diagonal(Layer):
 
     def call(self, x, mask=None):
         n_features = x.shape[1]
-        print ('input dimensions {}'.format(x.shape))
+        #print ('input dimensions {}'.format(x.shape))
 
         kernel = tf.reshape(self.kernel, (1, n_features))
         mult = x * kernel
