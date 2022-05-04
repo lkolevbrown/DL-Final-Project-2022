@@ -1,13 +1,11 @@
 import tensorflow as tf
 import keras
 import numpy as np
-from keras import regularizers
 from tensorflow.keras.layers import Layer
 # from keras import initializations
 from tensorflow.keras.initializers import glorot_uniform, Initializer
 from tensorflow.keras import activations, initializers, constraints
 # our layer will take input shape (nb_samples, 1)
-from tensorflow.keras.regularizers import Regularizer
 
 
 # assume the inputs are connected to the layer nodes according to a pattern. The first node is connected to the first n inputs
@@ -17,23 +15,15 @@ class Diagonal(Layer):
                  use_bias=True,
                  kernel_initializer='glorot_uniform',
                  bias_initializer='zeros',
-                 W_regularizer=None,
-                 bias_regularizer=None,
                  kernel_constraint=None,
                  bias_constraint=None,
                  **kwargs):
-        # self.output_dim = output_dim
-        # self.kernel_regularizer = regularizers.get(kernel_regularizer)
         self.units = units
         self.activation = activation
         self.activation_fn = activations.get(activation)
         self.use_bias = use_bias
         self.bias_initializer = initializers.get(bias_initializer)
         self.kernel_initializer = initializers.get(kernel_initializer)
-        self.W_regularizer = W_regularizer
-        self.bias_regularizer = bias_regularizer
-        self.kernel_regularizer = regularizers.get(W_regularizer)
-        self.bias_regularizer = regularizers.get(bias_regularizer)
         self.kernel_constraint = constraints.get(kernel_constraint)
         self.bias_constraint = bias_constraint
         super(Diagonal, self).__init__(**kwargs)
@@ -53,19 +43,17 @@ class Diagonal(Layer):
         self.nonzero_ind = np.column_stack((rows, cols))
 
         # print 'self.nonzero_ind', self.nonzero_ind
-        print ('self.kernel_initializer', self.W_regularizer, self.kernel_initializer, self.kernel_regularizer)
+        print ('self.kernel_initializer', self.kernel_initializer)
         self.kernel = self.add_weight(name='kernel',
                                       shape=(input_dimension,),
                                       # initializer='uniform',
                                       initializer=self.kernel_initializer,
-                                      regularizer=self.kernel_regularizer,
                                       trainable=True, constraint=self.kernel_constraint)
 
         if self.use_bias:
             self.bias = self.add_weight(shape=(self.units,),
                                         initializer=self.bias_initializer,
                                         name='bias',
-                                        regularizer=self.bias_regularizer,
                                         constraint=self.bias_constraint)
         else:
             self.bias = None
@@ -91,33 +79,10 @@ class Diagonal(Layer):
     def compute_output_shape(self, input_shape):
         return (input_shape[0], self.units)
 
-    def get_config(self):
-        # config = {
-        #         'units': self.units, 'activation':self.activation,
-        # 'kernel_shape': self.kernel_shape, 'nonzero_ind':self.nonzero_ind, 'n_inputs_per_node': self.n_inputs_per_node }
-
-        config = {
-
-            'units': self.units,
-            'activation': self.activation,
-            'use_bias': self.use_bias,
-            # 'W_regularizer' : self.W_regularizer,
-            # 'bias_regularizer' : self.bias_regularizer,
-
-        }
-        # 'kernel_initializer' : self.kernel_initializer,
-        # 'bias_initializer' : self.bias_initializer,
-        # 'W_regularizer' : ,
-        # 'bias_regularizer' : None
-        # 'kernel_shape': self.kernel_shape
-        # dsve
-        base_config = super(Diagonal, self).get_config()
-        return dict(list(base_config.items()) + list(config.items()))
-
 class SparseTF(Layer):
-    def __init__(self, units, map=None, nonzero_ind=None, kernel_initializer='glorot_uniform', W_regularizer=None,
+    def __init__(self, units, map=None, nonzero_ind=None, kernel_initializer='glorot_uniform',
                  activation='tanh', use_bias=True,
-                 bias_initializer='zeros', bias_regularizer=None, kernel_constraint=None, bias_constraint=None,
+                 bias_initializer='zeros', kernel_constraint=None, bias_constraint=None,
                  **kwargs):
         self.units = units
         self.activation = activation
@@ -125,9 +90,7 @@ class SparseTF(Layer):
         self.nonzero_ind = nonzero_ind
         self.use_bias = use_bias
         self.kernel_initializer = initializers.get(kernel_initializer)
-        self.kernel_regularizer = regularizers.get(W_regularizer)
         self.bias_initializer = initializers.get(bias_initializer)
-        self.bias_regularizer = regularizers.get(bias_regularizer)
         self.activation_fn = activations.get(activation)
         self.kernel_constraint = constraints.get(kernel_constraint)
         self.bias_constraint = constraints.get(bias_constraint)
@@ -156,14 +119,12 @@ class SparseTF(Layer):
         self.kernel_vector = self.add_weight(name='kernel_vector',
                                              shape=(nonzero_count,),
                                              initializer=self.kernel_initializer,
-                                             regularizer=self.kernel_regularizer,
                                              trainable=True, constraint=self.kernel_constraint)
 
         if self.use_bias:
             self.bias = self.add_weight(shape=(self.units,),
                                         initializer=self.bias_initializer,
                                         name='bias',
-                                        regularizer=self.bias_regularizer,
                                         constraint=self.bias_constraint)
         else:
             self.bias = None
@@ -181,25 +142,6 @@ class SparseTF(Layer):
             output = self.activation_fn(output)
 
         return output
-
-    def get_config(self):
-        config = {
-            'units': self.units,
-            'activation': self.activation,
-            # 'kernel_shape': self.kernel_shape,
-            'use_bias': self.use_bias,
-            'nonzero_ind': np.array(self.nonzero_ind),
-            # 'kernel_initializer': initializers.serialize(self.kernel_initializer),
-            # 'kernel_regularizer': regularizers.serialize(self.kernel_regularizer),
-            'bias_initializer': initializers.serialize(self.bias_initializer),
-            'bias_regularizer': regularizers.serialize(self.bias_regularizer),
-
-            'kernel_initializer': initializers.serialize(self.kernel_initializer),
-            'W_regularizer': regularizers.serialize(self.kernel_regularizer),
-
-        }
-        base_config = super(SparseTF, self).get_config()
-        return dict(list(base_config.items()) + list(config.items()))
 
     def compute_output_shape(self, input_shape):
         return (input_shape[0], self.units)

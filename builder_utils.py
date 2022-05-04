@@ -4,8 +4,8 @@ import logging
 import tensorflow as tf
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 from keras.layers import Dense, Dropout, Activation, BatchNormalization, multiply
-from tensorflow.keras.regularizers import L2
 
 # from data.pathways.pathway_loader import get_pathway_files
 from data.pathways.reactome import ReactomeNetwork
@@ -81,45 +81,58 @@ def shuffle_genes_map(mapp):
 
 
 class PNet(tf.keras.Model):
-    def __init__(self, features, genes, direction, activation, activation_decision, w_reg,
-             w_reg_outcomes, dropout, sparse, add_unk_genes, kernel_initializer, use_bias=False,
+    def __init__(self, features, genes, direction, activation, activation_decision, dropout, sparse, add_unk_genes, kernel_initializer, use_bias=False,
              shuffle_genes=False, attention=False, dropout_testing=False, non_neg=False, sparse_first_layer=True):
         super(PNet, self).__init__()
+
         n_features = len(features)
         n_genes = len(genes)
 
-        if not type(w_reg) == list:
-            w_reg = [w_reg] * 10
+        self.layer1 = Diagonal(n_genes, input_shape=(n_features,), activation=activation,
+                                  use_bias=use_bias, name='h0', kernel_initializer=kernel_initializer)
 
-        if not type(w_reg_outcomes) == list:
-            w_reg_outcomes = [w_reg_outcomes] * 10
-
-        if not type(dropout) == list:
-            dropout = [w_reg_outcomes] * 10
-
-        w_reg0 = w_reg[0]
-        w_reg_outcome0 = w_reg_outcomes[0]
-        w_reg_outcome1 = w_reg_outcomes[1]
-        constraints = {}
-
-        self.layer1 = Diagonal(n_genes, input_shape=(n_features,), activation=activation, W_regularizer=L2(w_reg0),
-                                  use_bias=use_bias, name='h0', kernel_initializer=kernel_initializer, **constraints)
-
-        self.dense1 = Dense(1, activation='linear', name='o_linear{}'.format(0), activity_regularizer=L2(w_reg_outcome0))
-        self.drop1 = Dropout(dropout[0], name='dropout_{}'.format(0))
+        self.dense1 = Dense(1, activation='linear', name='o_linear{}'.format(0))
+        self.drop1 = Dropout(dropout, name='dropout_{}'.format(0))
         self.activation1 = Activation(activation=activation_decision, name='o{}'.format(1))
 
 
-        mapp = get_layer_maps(genes, 1, direction, add_unk_genes)[0]
+        maps = get_layer_maps(genes, 5, direction, add_unk_genes)
 
-        w_regs = w_reg[1:]
-        w_reg_outcomes = w_reg_outcomes[1:]
-        dropouts = dropout[1:]
+        mapp = maps[0]
+        names = mapp.index
+        # names = list(mapp.index)
+        mapp = mapp.values
+        if shuffle_genes in ['all', 'pathways']:
+            mapp = shuffle_genes_map(mapp)
+        n_genes, n_pathways = mapp.shape
+        logging.info('n_genes, n_pathways {} {} '.format(n_genes, n_pathways))
+        self.hidden_layer1 = SparseTF(n_pathways, mapp, activation=activation,
+                                    kernel_initializer=kernel_initializer,
+                                    use_bias=use_bias)
 
-        w_reg = w_regs[1]
-        w_reg_outcome = w_reg_outcomes[1]
-        # dropout2 = dropouts[i]
-        dropout = dropouts[1]
+        self.decision1 = Dense(1, activation='linear')
+        self.dec_activ1 = Activation(activation=activation_decision,)
+        self.dec_drop1 = Dropout(dropout)
+
+        mapp = maps[1]
+        names = mapp.index
+        # names = list(mapp.index)
+        mapp = mapp.values
+        if shuffle_genes in ['all', 'pathways']:
+            mapp = shuffle_genes_map(mapp)
+        n_genes, n_pathways = mapp.shape
+
+        logging.info('n_genes, n_pathways {} {} '.format(n_genes, n_pathways))
+
+        self.hidden_layer2 = SparseTF(n_pathways, mapp, activation=activation,
+                                    kernel_initializer=kernel_initializer,
+                                    use_bias=use_bias)
+
+        self.decision2 = Dense(1, activation='linear')
+        self.dec_activ2 = Activation(activation=activation_decision)
+        self.dec_drop2 = Dropout(dropout)
+
+        mapp = maps[2]
         names = mapp.index
         # names = list(mapp.index)
         mapp = mapp.values
@@ -128,15 +141,46 @@ class PNet(tf.keras.Model):
         n_genes, n_pathways = mapp.shape
         logging.info('n_genes, n_pathways {} {} '.format(n_genes, n_pathways))
         # print 'map # ones {}'.format(np.sum(mapp))
-        print ('layer {}, dropout  {} w_reg {}'.format(1, dropout, w_reg))
         layer_name = 'h{}'.format(1)
-        self.hidden_layer = SparseTF(n_pathways, mapp, activation=activation, W_regularizer=L2(w_reg),
-                                    name=layer_name, kernel_initializer=kernel_initializer,
-                                    use_bias=use_bias, **constraints)
+        self.hidden_layer3 = SparseTF(n_pathways, mapp, activation=activation,
+                                    kernel_initializer=kernel_initializer,
+                                    use_bias=use_bias)
 
-        self.dense2 = Dense(1, activation='linear', name='o_linear{}'.format(1 + 2), activity_regularizer=L2(w_reg_outcome))
-        self.activation2 = Activation(activation=activation_decision, name='o{}'.format(1 + 2))
-        self.drop2 = Dropout(dropout, name='dropout_{}'.format(1 + 1))
+        self.decision3 = Dense(1, activation='linear')
+        self.dec_activ3 = Activation(activation=activation_decision)
+        self.dec_drop3 = Dropout(dropout)
+
+        mapp = maps[3]
+        names = mapp.index
+        # names = list(mapp.index)
+        mapp = mapp.values
+        if shuffle_genes in ['all', 'pathways']:
+            mapp = shuffle_genes_map(mapp)
+        n_genes, n_pathways = mapp.shape
+        logging.info('n_genes, n_pathways {} {} '.format(n_genes, n_pathways))
+        self.hidden_layer4 = SparseTF(n_pathways, mapp, activation=activation,
+                                    kernel_initializer=kernel_initializer,
+                                    use_bias=use_bias)
+
+        self.decision4 = Dense(1, activation='linear')
+        self.dec_activ4 = Activation(activation=activation_decision)
+        self.dec_drop4 = Dropout(dropout)
+
+        mapp = maps[4]
+        names = mapp.index
+        # names = list(mapp.index)
+        mapp = mapp.values
+        if shuffle_genes in ['all', 'pathways']:
+            mapp = shuffle_genes_map(mapp)
+        n_genes, n_pathways = mapp.shape
+        logging.info('n_genes, n_pathways {} {} '.format(n_genes, n_pathways))
+        self.hidden_layer5 = SparseTF(n_pathways, mapp, activation=activation,
+                                    kernel_initializer=kernel_initializer,
+                                    use_bias=use_bias)
+
+        self.decision5 = Dense(1, activation='linear')
+        self.dec_activ5 = Activation(activation=activation_decision)
+        self.dec_drop5 = Dropout(dropout)
 
 
     def call(self, inputs, training=False):
@@ -152,115 +196,59 @@ class PNet(tf.keras.Model):
         decision_outcome = self.activation1(decision_outcome)
         decision_outcomes.append(decision_outcome)
 
-        outcome = self.hidden_layer(outcome)
+        outcome = self.hidden_layer1(outcome)
 
-        decision_outcome = self.dense2(outcome)
-        decision_outcome = self.activation2(decision_outcome)
+        # hidden block 1
+        decision_outcome = self.decision1(outcome)
+        decision_outcome = self.dec_activ1(decision_outcome)
         decision_outcomes.append(decision_outcome)
         if (training):
-            outcome = self.drop2(outcome, training=dropout_testing)
+            outcome = self.dec_drop1(outcome, training=dropout_testing)
+
+        #hidden block 2
+        outcome = self.hidden_layer2(outcome)
+
+        decision_outcome = self.decision2(outcome)
+        decision_outcome = self.dec_activ2(decision_outcome)
+        decision_outcomes.append(decision_outcome)
+        if (training):
+            outcome = self.dec_drop2(outcome, training=dropout_testing)
+
+        #hidden block 3
+        outcome = self.hidden_layer3(outcome)
+
+        decision_outcome = self.decision3(outcome)
+        decision_outcome = self.dec_activ3(decision_outcome)
+        decision_outcomes.append(decision_outcome)
+        if (training):
+            outcome = self.dec_drop3(outcome, training=dropout_testing)
+
+        #hidden block 4
+        outcome = self.hidden_layer4(outcome)
+
+        decision_outcome = self.decision4(outcome)
+        decision_outcome = self.dec_activ4(decision_outcome)
+        decision_outcomes.append(decision_outcome)
+        if (training):
+            outcome = self.dec_drop4(outcome, training=dropout_testing)
+
+        #hidden block 5
+        outcome = self.hidden_layer5(outcome)
+
+        decision_outcome = self.decision5(outcome)
+        decision_outcome = self.dec_activ5(decision_outcome)
+        decision_outcomes.append(decision_outcome)
+        if (training):
+            outcome = self.dec_drop5(outcome, training=dropout_testing)
 
         return outcome, decision_outcomes
 
     def loss(self, probs, labels):
-        pass
+        loss_weights = np.exp(range(1, len(probs) + 1))
 
-
-def get_pnet(inputs, features, genes, n_hidden_layers, direction, activation, activation_decision, w_reg,
-             w_reg_outcomes, dropout, sparse, add_unk_genes, batch_normal, kernel_initializer, use_bias=False,
-             shuffle_genes=False, attention=False, dropout_testing=False, non_neg=False, sparse_first_layer=True):
-    feature_names = {}
-    n_features = len(features)
-    n_genes = len(genes)
-
-    if not type(w_reg) == list:
-        w_reg = [w_reg] * 10
-
-    if not type(w_reg_outcomes) == list:
-        w_reg_outcomes = [w_reg_outcomes] * 10
-
-    if not type(dropout) == list:
-        dropout = [w_reg_outcomes] * 10
-
-    w_reg0 = w_reg[0]
-    w_reg_outcome0 = w_reg_outcomes[0]
-    w_reg_outcome1 = w_reg_outcomes[1]
-    reg_l = l2
-    constraints = {}
-
-    layer1 = Diagonal(n_genes, input_shape=(n_features,), activation=activation, W_regularizer=l2(w_reg0),
-                              use_bias=use_bias, name='h0', kernel_initializer=kernel_initializer, **constraints)
-
-    outcome = layer1(inputs)
-
-    decision_outcomes = []
-
-    decision_outcome = Dense(1, activation='linear', name='o_linear{}'.format(0), W_regularizer=reg_l(w_reg_outcome0))(
-        inputs)
-    
-    # testing
-    if batch_normal:
-        decision_outcome = BatchNormalization()(decision_outcome)
-
-    decision_outcome = Dense(1, activation='linear', name='o_linear{}'.format(1),
-                             W_regularizer=reg_l(w_reg_outcome1 / 2.))(outcome)
-
-    drop2 = Dropout(dropout[0], name='dropout_{}'.format(0))
-
-    outcome = drop2(outcome, training=dropout_testing)
-
-    # testing
-    if batch_normal:
-        decision_outcome = BatchNormalization()(decision_outcome)
-
-    decision_outcome = Activation(activation=activation_decision, name='o{}'.format(1))(decision_outcome)
-    decision_outcomes.append(decision_outcome)
-
-    if n_hidden_layers > 0:
-        maps = get_layer_maps(genes, n_hidden_layers, direction, add_unk_genes)
-        layer_inds = range(1, len(maps))
+        losses = []
+        bce = tf.keras.losses.BinaryCrossentropy(from_logits=False)
+        for i in tqdm(range(len(probs))):
+            losses.append(bce(labels, tf.squeeze(probs[i])))
         
-        print ('original dropout', dropout)
-        print ('dropout', layer_inds, dropout, w_reg)
-        w_regs = w_reg[1:]
-        w_reg_outcomes = w_reg_outcomes[1:]
-        dropouts = dropout[1:]
-        for i, mapp in enumerate(maps[0:-1]):
-            w_reg = w_regs[i]
-            w_reg_outcome = w_reg_outcomes[i]
-            # dropout2 = dropouts[i]
-            dropout = dropouts[1]
-            names = mapp.index
-            # names = list(mapp.index)
-            mapp = mapp.values
-            if shuffle_genes in ['all', 'pathways']:
-                mapp = shuffle_genes_map(mapp)
-            n_genes, n_pathways = mapp.shape
-            logging.info('n_genes, n_pathways {} {} '.format(n_genes, n_pathways))
-            # print 'map # ones {}'.format(np.sum(mapp))
-            print ('layer {}, dropout  {} w_reg {}'.format(i, dropout, w_reg))
-            layer_name = 'h{}'.format(i + 1)
-            if sparse:
-                hidden_layer = SparseTF(n_pathways, mapp, activation=activation, W_regularizer=reg_l(w_reg),
-                                        name=layer_name, kernel_initializer=kernel_initializer,
-                                        use_bias=use_bias, **constraints)
-            else:
-                hidden_layer = Dense(n_pathways, activation=activation, W_regularizer=reg_l(w_reg),
-                                     name=layer_name, kernel_initializer=kernel_initializer, **constraints)
-
-            outcome = hidden_layer(outcome)
-
-            decision_outcome = Dense(1, activation='linear', name='o_linear{}'.format(i + 2),
-                                     W_regularizer=reg_l(w_reg_outcome))(outcome)
-
-            if batch_normal:
-                decision_outcome = BatchNormalization()(decision_outcome)
-            decision_outcome = Activation(activation=activation_decision, name='o{}'.format(i + 2))(decision_outcome)
-            decision_outcomes.append(decision_outcome)
-            drop2 = Dropout(dropout, name='dropout_{}'.format(i + 1))
-            outcome = drop2(outcome, training=dropout_testing)
-
-            feature_names['h{}'.format(i)] = names
-        i = len(maps)
-        feature_names['h{}'.format(i - 1)] = maps[-1].index
-    return outcome, decision_outcomes, feature_names
+        return tf.math.reduce_sum(tf.math.multiply(losses, loss_weights))
