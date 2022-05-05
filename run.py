@@ -37,7 +37,29 @@ def train_pnet(pnet, inputs, labels, batch_size):
 
         pnet.optimizer.apply_gradients(zip(gradients, trainable_vars))
 
+        print(f1(y_batch, outcomes[-1]).numpy())
+
     return total_loss / num_batches
+
+def f1(y_true, y_pred):
+    def recall(y_true, y_pred):
+        true_positives = tf.math.reduce_sum(tf.math.multiply(y_true, y_pred))
+        possible_positives = tf.math.reduce_sum(tf.math.multiply(tf.ones(shape=y_true.shape), y_true))
+        recall = true_positives / (possible_positives + tf.keras.backend.epsilon())
+        return recall
+
+    def precision(y_true, y_pred):
+        true_positives = tf.math.reduce_sum(tf.math.multiply(y_true, y_pred))
+        predicted_positives = tf.math.reduce_sum(tf.math.multiply(tf.ones(shape=y_pred.shape), y_pred))
+        precision = true_positives / (predicted_positives + tf.keras.backend.epsilon())
+        return precision
+
+    y_true = tf.cast(y_true, dtype=tf.float32)
+    y_pred = tf.math.round(y_pred)
+
+    precision = precision(y_true, y_pred)
+    recall = recall(y_true, y_pred)
+    return 2 * ((precision * recall) / (precision + recall + tf.keras.backend.epsilon()))
 
 def main(args):
     x, response, samples, cols = load_data('P1000_final_analysis_set_cross_hotspots.csv')
