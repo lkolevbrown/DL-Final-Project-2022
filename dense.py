@@ -9,9 +9,6 @@ class Dense(tf.keras.Model):
         
         """
         super(Dense, self).__init__()
-        self.num_actions = num_actions
-        
-        # TODO: Define network parameters and optimizer
         self.learning_rate = 0.01
         self.optimizer = tf.keras.optimizers.Adam(self.learning_rate)
 
@@ -19,7 +16,7 @@ class Dense(tf.keras.Model):
             tf.keras.layers.InputLayer(input_shape = (None, num_cols)),
             tf.keras.layers.Dense(16, activation='tanh'),
             tf.keras.layers.Dense(4, activation='tanh'),
-            tf.keras.layers.Dense(2, activation='softmax')])
+            tf.keras.layers.Dense(1, activation='softmax')])
 
 
     def call(self, inputs):
@@ -31,4 +28,4 @@ class Dense(tf.keras.Model):
         """
         """
         bce = tf.keras.losses.BinaryCrossentropy(from_logits=False)
-        return bce(labels, probs).numpy()
+        return bce(labels, probs)

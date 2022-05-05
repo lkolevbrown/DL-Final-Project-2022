@@ -20,7 +20,7 @@ def parseArguments():
     args = parser.parse_args()
     return args
 
-def train_model(model, inputs, labels, batch_size):
+def train_model(model, is_sparse, inputs, labels, batch_size):
     total_loss = 0
 
     num_batches = len(inputs) // batch_size
@@ -30,7 +30,10 @@ def train_model(model, inputs, labels, batch_size):
         y_batch = labels[batch_num * batch_size:batch_num * batch_size + batch_size + 1]
 
         with tf.GradientTape() as tape:
-            _, outcomes = model(x_batch)
+            if is_sparse:
+                _, outcomes = model(x_batch)
+            else:
+                outcomes = model(x_batch)
             loss = model.loss(outcomes, y_batch)
             total_loss = total_loss + loss
 
@@ -39,7 +42,10 @@ def train_model(model, inputs, labels, batch_size):
 
         model.optimizer.apply_gradients(zip(gradients, trainable_vars))
 
-        print(f1(y_batch, outcomes[-1]).numpy())
+        if is_sparse:
+            print(f1(y_batch, outcomes[-1]).numpy())
+        else:
+            print(f1(y_batch, outcomes[-1]).numpy())
 
     return total_loss / num_batches
 
@@ -68,7 +74,7 @@ def main(args):
     x = tf.convert_to_tensor(x)
     response = tf.convert_to_tensor(response)
 
-    if is_sparse:
+    if args.is_sparse:
         model = PNet(cols, cols, 'root_to_leaf', 'tanh', 'softmax', 0, True, False, 'lecun_uniform')
     else:
         model = Dense(len(cols))
@@ -81,7 +87,7 @@ def main(args):
         shuffled = tf.random.shuffle(inds)
         shuffled_inputs = tf.gather(x, shuffled) 
         shuffled_labels = tf.gather(response, shuffled)
-        total_loss = train_model(model, shuffled_inputs, shuffled_labels, args.batch_size)
+        total_loss = train_model(model, args.is_sparse, shuffled_inputs, shuffled_labels, args.batch_size)
         #print(f"Train Epoch: {epoch_id}")
         losses.append(total_loss)
 
