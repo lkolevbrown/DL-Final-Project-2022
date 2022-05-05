@@ -82,7 +82,7 @@ def shuffle_genes_map(mapp):
 
 class PNet(tf.keras.Model):
     def __init__(self, features, genes, direction, activation, activation_decision, dropout, sparse, add_unk_genes, kernel_initializer, use_bias=False,
-             shuffle_genes=False, attention=False, dropout_testing=False, non_neg=False, sparse_first_layer=True):
+             shuffle_genes=False, attention=False, dropout_testing=False):
         super(PNet, self).__init__()
 
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=0.01)
@@ -100,8 +100,6 @@ class PNet(tf.keras.Model):
         maps = get_layer_maps(genes, 5, direction, add_unk_genes)
 
         mapp = maps[0]
-        names = mapp.index
-        # names = list(mapp.index)
         mapp = mapp.values
         if shuffle_genes in ['all', 'pathways']:
             mapp = shuffle_genes_map(mapp)
@@ -116,8 +114,6 @@ class PNet(tf.keras.Model):
         self.dec_drop1 = Dropout(dropout)
 
         mapp = maps[1]
-        names = mapp.index
-        # names = list(mapp.index)
         mapp = mapp.values
         if shuffle_genes in ['all', 'pathways']:
             mapp = shuffle_genes_map(mapp)
@@ -134,8 +130,6 @@ class PNet(tf.keras.Model):
         self.dec_drop2 = Dropout(dropout)
 
         mapp = maps[2]
-        names = mapp.index
-        # names = list(mapp.index)
         mapp = mapp.values
         if shuffle_genes in ['all', 'pathways']:
             mapp = shuffle_genes_map(mapp)
@@ -152,8 +146,6 @@ class PNet(tf.keras.Model):
         self.dec_drop3 = Dropout(dropout)
 
         mapp = maps[3]
-        names = mapp.index
-        # names = list(mapp.index)
         mapp = mapp.values
         if shuffle_genes in ['all', 'pathways']:
             mapp = shuffle_genes_map(mapp)
@@ -168,8 +160,6 @@ class PNet(tf.keras.Model):
         self.dec_drop4 = Dropout(dropout)
 
         mapp = maps[4]
-        names = mapp.index
-        # names = list(mapp.index)
         mapp = mapp.values
         if shuffle_genes in ['all', 'pathways']:
             mapp = shuffle_genes_map(mapp)

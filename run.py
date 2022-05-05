@@ -9,16 +9,18 @@ from tqdm import tqdm
 from builder_utils import *
 from data_reader import load_data
 import tensorflow as tf
+from dense import *
 
 
 def parseArguments():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--is_sparse", action="store_true")
     parser.add_argument("--batch_size", type=int, default=50)
     parser.add_argument("--num_epochs", type=int, default=10)
     args = parser.parse_args()
     return args
 
-def train_pnet(pnet, inputs, labels, batch_size):
+def train_model(model, inputs, labels, batch_size):
     total_loss = 0
 
     num_batches = len(inputs) // batch_size
@@ -28,14 +30,14 @@ def train_pnet(pnet, inputs, labels, batch_size):
         y_batch = labels[batch_num * batch_size:batch_num * batch_size + batch_size + 1]
 
         with tf.GradientTape() as tape:
-            _, outcomes = pnet(x_batch)
-            loss = pnet.loss(outcomes, y_batch)
+            _, outcomes = model(x_batch)
+            loss = model.loss(outcomes, y_batch)
             total_loss = total_loss + loss
 
-        trainable_vars = pnet.trainable_variables
+        trainable_vars = model.trainable_variables
         gradients = tape.gradient(loss, trainable_vars)
 
-        pnet.optimizer.apply_gradients(zip(gradients, trainable_vars))
+        model.optimizer.apply_gradients(zip(gradients, trainable_vars))
 
         print(f1(y_batch, outcomes[-1]).numpy())
 
@@ -63,14 +65,23 @@ def f1(y_true, y_pred):
 
 def main(args):
     x, response, samples, cols = load_data('P1000_final_analysis_set_cross_hotspots.csv')
+    x = tf.convert_to_tensor(x)
+    response = tf.convert_to_tensor(response)
 
-    pnet = PNet(cols, cols, 'root_to_leaf', 'tanh', 'sigmoid', 0, True, False, 'lecun_uniform')
+    if is_sparse:
+        model = PNet(cols, cols, 'root_to_leaf', 'tanh', 'softmax', 0, True, False, 'lecun_uniform')
+    else:
+        model = Dense(len(cols))
 
     losses = []
 
     # Train VAE
     for epoch_id in tqdm(range(args.num_epochs)):
-        total_loss = train_pnet(pnet, tf.convert_to_tensor(x), tf.convert_to_tensor(response), args.batch_size)
+        inds = tf.range(start = 0, limit = len(response))
+        shuffled = tf.random.shuffle(inds)
+        shuffled_inputs = tf.gather(x, shuffled) 
+        shuffled_labels = tf.gather(response, shuffled)
+        total_loss = train_model(model, shuffled_inputs, shuffled_labels, args.batch_size)
         #print(f"Train Epoch: {epoch_id}")
         losses.append(total_loss)
 
