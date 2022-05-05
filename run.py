@@ -45,7 +45,7 @@ def train_model(model, is_sparse, inputs, labels, batch_size):
         if is_sparse:
             print(f1(y_batch, outcomes[-1]).numpy())
         else:
-            print(f1(y_batch, outcomes[-1]).numpy())
+            print(f1(y_batch, outcomes).numpy())
 
     return total_loss / num_batches
 
