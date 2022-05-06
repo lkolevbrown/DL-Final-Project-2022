@@ -8,7 +8,7 @@ import tensorflow_addons as tfa
 from tensorflow.math import sigmoid
 from tqdm import tqdm
 from builder_utils import *
-from data_reader import load_data
+from data_reader import *
 import tensorflow as tf
 from dense import *
 
@@ -55,6 +55,7 @@ def train_model(model, is_sparse, inputs, labels, batch_size):
     return total_loss / num_batches
 
 def main(args):
+    paperData = ProstateDataPaper()
     x, response, samples, cols = load_data('P1000_final_analysis_set_cross_hotspots.csv')
     x = tf.convert_to_tensor(x)
     response = tf.one_hot(tf.convert_to_tensor(response), 2)
