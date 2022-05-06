@@ -4,6 +4,7 @@ import numpy as np
 import os
 import random
 import tensorflow as tf
+import tensorflow_addons as tfa
 from tensorflow.math import sigmoid
 from tqdm import tqdm
 from builder_utils import *
@@ -42,37 +43,21 @@ def train_model(model, is_sparse, inputs, labels, batch_size):
 
         model.optimizer.apply_gradients(zip(gradients, trainable_vars))
 
+        f1 = tfa.metrics.F1Score(num_classes=2, threshold=0.5)
+
         if is_sparse:
-            print(f1(y_batch, outcomes[-1]).numpy())
+            f1.update_state(y_batch, outcomes[-1])
+            print(f1.result().numpy())
         else:
-            print(f1(y_batch, outcomes).numpy())
+            f1.update_state(y_batch, outcomes)
+            print(f1.result().numpy())
 
     return total_loss / num_batches
-
-def f1(y_true, y_pred):
-    def recall(y_true, y_pred):
-        true_positives = tf.math.reduce_sum(tf.math.multiply(y_true, y_pred))
-        possible_positives = tf.math.reduce_sum(tf.math.multiply(tf.ones(shape=y_true.shape), y_true))
-        recall = true_positives / (possible_positives + tf.keras.backend.epsilon())
-        return recall
-
-    def precision(y_true, y_pred):
-        true_positives = tf.math.reduce_sum(tf.math.multiply(y_true, y_pred))
-        predicted_positives = tf.math.reduce_sum(tf.math.multiply(tf.ones(shape=y_pred.shape), y_pred))
-        precision = true_positives / (predicted_positives + tf.keras.backend.epsilon())
-        return precision
-
-    y_true = tf.cast(y_true, dtype=tf.float32)
-    y_pred = tf.math.round(y_pred)
-
-    precision = precision(y_true, y_pred)
-    recall = recall(y_true, y_pred)
-    return 2 * ((precision * recall) / (precision + recall + tf.keras.backend.epsilon()))
 
 def main(args):
     x, response, samples, cols = load_data('P1000_final_analysis_set_cross_hotspots.csv')
     x = tf.convert_to_tensor(x)
-    response = tf.convert_to_tensor(response)
+    response = tf.one_hot(tf.convert_to_tensor(response), 2)
 
     if args.is_sparse:
         model = PNet(cols, cols, 'root_to_leaf', 'tanh', 'softmax', 0, True, False, 'lecun_uniform')

@@ -92,7 +92,7 @@ class PNet(tf.keras.Model):
 
         self.layer1 = Diagonal(n_genes, input_shape=(n_features,), activation=activation, use_bias=use_bias, name='h0', kernel_initializer=kernel_initializer)
 
-        self.dense1 = Dense(1, activation='linear', name='o_linear{}'.format(0))
+        self.dense1 = Dense(2, activation='linear', name='o_linear{}'.format(0))
         self.drop1 = Dropout(dropout, name='dropout_{}'.format(0))
         self.activation1 = Activation(activation=activation_decision, name='o{}'.format(1))
 
@@ -109,8 +109,7 @@ class PNet(tf.keras.Model):
                                     kernel_initializer=kernel_initializer,
                                     use_bias=use_bias)
 
-        self.decision1 = Dense(1, activation='linear')
-        self.dec_activ1 = Activation(activation=activation_decision,)
+        self.decision1 = Dense(2, activation=activation_decision)
         self.dec_drop1 = Dropout(dropout)
 
         mapp = maps[1]
@@ -125,8 +124,7 @@ class PNet(tf.keras.Model):
                                     kernel_initializer=kernel_initializer,
                                     use_bias=use_bias)
 
-        self.decision2 = Dense(1, activation='linear')
-        self.dec_activ2 = Activation(activation=activation_decision)
+        self.decision2 = Dense(2, activation=activation_decision)
         self.dec_drop2 = Dropout(dropout)
 
         mapp = maps[2]
@@ -141,8 +139,7 @@ class PNet(tf.keras.Model):
                                     kernel_initializer=kernel_initializer,
                                     use_bias=use_bias)
 
-        self.decision3 = Dense(1, activation='linear')
-        self.dec_activ3 = Activation(activation=activation_decision)
+        self.decision3 = Dense(2, activation=activation_decision)
         self.dec_drop3 = Dropout(dropout)
 
         mapp = maps[3]
@@ -155,8 +152,7 @@ class PNet(tf.keras.Model):
                                     kernel_initializer=kernel_initializer,
                                     use_bias=use_bias)
 
-        self.decision4 = Dense(1, activation='linear')
-        self.dec_activ4 = Activation(activation=activation_decision)
+        self.decision4 = Dense(2, activation=activation_decision)
         self.dec_drop4 = Dropout(dropout)
 
         mapp = maps[4]
@@ -169,8 +165,7 @@ class PNet(tf.keras.Model):
                                     kernel_initializer=kernel_initializer,
                                     use_bias=use_bias)
 
-        self.decision5 = Dense(1, activation='linear')
-        self.dec_activ5 = Activation(activation=activation_decision)
+        self.decision5 = Dense(2, activation=activation_decision)
         self.dec_drop5 = Dropout(dropout)
 
 
@@ -191,7 +186,6 @@ class PNet(tf.keras.Model):
 
         # hidden block 1
         decision_outcome = self.decision1(outcome)
-        decision_outcome = self.dec_activ1(decision_outcome)
         decision_outcomes.append(decision_outcome)
         if (training):
             outcome = self.dec_drop1(outcome, training=dropout_testing)
@@ -200,7 +194,6 @@ class PNet(tf.keras.Model):
         outcome = self.hidden_layer2(outcome)
 
         decision_outcome = self.decision2(outcome)
-        decision_outcome = self.dec_activ2(decision_outcome)
         decision_outcomes.append(decision_outcome)
         if (training):
             outcome = self.dec_drop2(outcome, training=dropout_testing)
@@ -209,7 +202,6 @@ class PNet(tf.keras.Model):
         outcome = self.hidden_layer3(outcome)
 
         decision_outcome = self.decision3(outcome)
-        decision_outcome = self.dec_activ3(decision_outcome)
         decision_outcomes.append(decision_outcome)
         if (training):
             outcome = self.dec_drop3(outcome, training=dropout_testing)
@@ -218,7 +210,6 @@ class PNet(tf.keras.Model):
         outcome = self.hidden_layer4(outcome)
 
         decision_outcome = self.decision4(outcome)
-        decision_outcome = self.dec_activ4(decision_outcome)
         decision_outcomes.append(decision_outcome)
         if (training):
             outcome = self.dec_drop4(outcome, training=dropout_testing)
@@ -227,7 +218,6 @@ class PNet(tf.keras.Model):
         outcome = self.hidden_layer5(outcome)
 
         decision_outcome = self.decision5(outcome)
-        decision_outcome = self.dec_activ5(decision_outcome)
         decision_outcomes.append(decision_outcome)
         if (training):
             outcome = self.dec_drop5(outcome, training=dropout_testing)
@@ -240,6 +230,6 @@ class PNet(tf.keras.Model):
         losses = []
         bce = tf.keras.losses.BinaryCrossentropy(from_logits=False)
         for i in range(len(probs)):
-            losses.append(bce(labels, tf.squeeze(probs[i])))
+            losses.append(bce(labels, probs[i]))
         
         return tf.math.reduce_sum(tf.math.multiply(losses, loss_weights))
