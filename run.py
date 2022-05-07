@@ -11,6 +11,7 @@ from builder_utils import *
 from data_reader import *
 import tensorflow as tf
 from dense import *
+from sklearn.model_selection import KFold
 
 
 def parseArguments():
@@ -53,6 +54,32 @@ def train_model(model, is_sparse, inputs, labels, batch_size):
             print(f1.result().numpy())
 
     return total_loss / num_batches
+
+def test_model(model, inputs, labels, batch_size):
+    
+    num_batches = len(inputs) // batch_size
+
+    for batch_num in range(num_batches):
+        x_batch = inputs[batch_num * batch_size:batch_num * batch_size + batch_size + 1]
+        y_batch = labels[batch_num * batch_size:batch_num * batch_size + batch_size + 1]
+
+        outcomes = model(x_batch)
+        loss = model.loss(outcomes, y_batch)      
+
+    pass 
+
+def cv(k_fold_num, model,is_sparse, train, test, inputs, labels, batch_size):
+    kfold = KFold(n_splits = k_fold_num, shuffle=True)
+    # check iteration of the fold
+    acc_list = []
+    fold_no = 1 
+    for train, test, in kfold.split(inputs, labels):
+        train_model(model,is_sparse,inputs[train],labels[train], batch_size)
+        accuracy = test_model(model,inputs[test],labels[test],batch_size)
+        acc_list.append[accuracy]
+        print(f"Accuracy of {fold_no} is {accuracy}")
+    
+    return tf.reduce_mean(tf.constant(acc_list))
 
 def main(args):
     paperData = ProstateDataPaper()
