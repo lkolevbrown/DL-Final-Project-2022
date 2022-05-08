@@ -216,11 +216,9 @@ def load_data_type(data_type='gene', cnv_levels=5, cnv_filter_single_event=True,
 
     if data_type == 'cnv_burden':
         x, response, info, genes = load_data(cnv_burden_filename, None)
-        # x.loc[:, :] = 0.
 
     if data_type == 'fusion_genes':
         x, response, info, genes = load_data(fusions_genes_filename, selected_genes)
-        # x.loc[:,:]=0.
 
     return x, response, info, genes
 

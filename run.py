@@ -82,7 +82,7 @@ def cv(k_fold_num, model,is_sparse, train, test, inputs, labels, batch_size):
     return tf.reduce_mean(tf.constant(acc_list))
 
 def main(args):
-    paperData = ProstateDataPaper()
+    #paperData = ProstateDataPaper()
     x, response, samples, cols = load_data('P1000_final_analysis_set_cross_hotspots.csv')
     x = tf.convert_to_tensor(x)
     response = tf.one_hot(tf.convert_to_tensor(response), 2)
