@@ -46,24 +46,23 @@ def train_model(model, is_sparse, inputs, labels, batch_size):
 
     return total_loss / num_batches
 
-def test_model(model, is_sparse, inputs, labels):
+def test_model(model, is_sparse, metric, inputs, labels, validation=False):
     if is_sparse:
         _, outcomes = model(inputs)
     else:
         outcomes = model(inputs)
 
-    f1 = tfa.metrics.F1Score(num_classes=2, threshold=0.5)
-
     if is_sparse:
-        f1.update_state(labels, outcomes[-1])
+        metric.update_state(labels, outcomes[-1])
     else:
-        f1.update_state(labels, outcomes)
+        metric.update_state(labels, outcomes)
 
-    f1_score = f1.result().numpy() 
-    print(f"F1 Score: {f1_score}")
-    return f1.result().numpy() 
+    f1_score = metric.result().numpy() 
+    if not validation:
+        print(f"F1 Score: {f1_score}")
+    return f1_score
 
-def cv(k_fold_num, model, is_sparse, inputs_train, labels_train, inputs_validate, labels_validate, batch_size):
+def cv(k_fold_num, model, is_sparse, metric, inputs_train, labels_train, inputs_validate, labels_validate, batch_size):
     kfold = KFold(n_splits = k_fold_num, shuffle=True)
     # check iteration of the fold
     acc_list_0 = []
@@ -73,18 +72,18 @@ def cv(k_fold_num, model, is_sparse, inputs_train, labels_train, inputs_validate
     for train, test in kfold.split(inputs_train, labels_train):
         loss = train_model(model,is_sparse,tf.gather(inputs_train,train),tf.gather(labels_train,train), batch_size)
         losses.append(loss)
-        accuracies = test_model(model,is_sparse,tf.gather(inputs_train,test),tf.gather(labels_train,test))
+        accuracies = test_model(model,is_sparse,metric,tf.gather(inputs_train,test),tf.gather(labels_train,test))
         acc_list_0.append(accuracies[0])
         acc_list_1.append(accuracies[1])
         fold_no += 1
-        validation_score = test_model(model, is_sparse, inputs_validate, labels_validate)
+        validation_score = test_model(model, is_sparse, metric, inputs_validate, labels_validate, validation=True)
         print(f"Validation F1 Score: {validation_score}")
     
     return tf.reduce_mean(tf.constant(acc_list_0)),tf.reduce_mean(tf.constant(acc_list_1)), losses
 
 def main(args):
     paperData = ProstateDataPaper(data_type='mut_important')
-    
+
     #x, y, info, cols = paperData.get_data()
     #y = tf.one_hot(tf.convert_to_tensor(y), 2)
     x_train, x_validate, x_test, y_train, y_validate, y_test, info_train, info_validate, info_test, cols = paperData.get_train_validate_test()
@@ -111,13 +110,15 @@ def main(args):
     #     losses.append(total_loss)
     # print(losses)
 
+    f1 = tfa.metrics.F1Score(num_classes=2)
+
     #USING CROSS VAL:
     for epoch_id in tqdm(range(args.num_epochs)):
-        ac0, ac1, epoch_loss = cv(5, model, args.is_sparse, x_train, y_train, x_validate, y_validate, args.batch_size)
+        ac0, ac1, epoch_loss = cv(5, model, args.is_sparse, f1, x_train, y_train, x_validate, y_validate, args.batch_size)
         print(f"Average F1 Score for class 0 is {round(ac0.numpy(), 4)} and for class 1 is {round(ac1.numpy(), 4)}")
         losses.extend(epoch_loss)
 
-    test_f1 = test_model(model, args.is_sparse, x_test, y_test)
+    test_f1 = test_model(model, args.is_sparse, f1, x_test, y_test, validation=True)
     print(f"Testing F1 Score for class 0 is {round(test_f1[0], 4)} and for class 1 is {round(test_f1[1], 4)}")
     print(f"Losses across the entire training rountine: {losses}")
 
