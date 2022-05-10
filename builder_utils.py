@@ -5,7 +5,7 @@ import tensorflow as tf
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-from keras.layers import Dense, Dropout, Activation, BatchNormalization, multiply
+from tensorflow.keras.layers import Dense, Dropout, Activation
 
 # from data.pathways.pathway_loader import get_pathway_files
 from data.pathways.reactome import ReactomeNetwork
@@ -64,14 +64,6 @@ def get_layer_maps(genes, n_levels, direction, add_unk_genes):
 
 
 def shuffle_genes_map(mapp):
-    # print mapp[0:10, 0:10]
-    # print sum(mapp)
-    # logging.info('shuffling the map')
-    # mapp = mapp.T
-    # np.random.shuffle(mapp)
-    # mapp= mapp.T
-    # print mapp[0:10, 0:10]
-    # print sum(mapp)
     logging.info('shuffling')
     ones_ratio = np.sum(mapp) / np.prod(mapp.shape)
     logging.info('ones_ratio {}'.format(ones_ratio))
@@ -81,8 +73,8 @@ def shuffle_genes_map(mapp):
 
 
 class PNet(tf.keras.Model):
-    def __init__(self, features, genes, direction, activation, activation_decision, dropout, sparse, add_unk_genes, kernel_initializer, use_bias=False,
-             shuffle_genes=False, attention=False, dropout_testing=False):
+    def __init__(self, features, genes, direction, activation, activation_decision, dropout, sparse, add_unk_genes, kernel_initializer='random_normal', use_bias=False,
+             shuffle_genes=False):
         super(PNet, self).__init__()
 
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=0.01)

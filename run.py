@@ -84,10 +84,7 @@ def cv(k_fold_num, model, is_sparse, inputs_train, labels_train, inputs_validate
 
 def main(args):
     paperData = ProstateDataPaper(data_type='mut_important')
-    #x, response, samples, cols = load_data('P1000_final_analysis_set_cross_hotspots.csv')
-    #x = tf.convert_to_tensor(x)
-    #response = tf.one_hot(tf.convert_to_tensor(response), 2)
-
+    
     #x, y, info, cols = paperData.get_data()
     #y = tf.one_hot(tf.convert_to_tensor(y), 2)
     x_train, x_validate, x_test, y_train, y_validate, y_test, info_train, info_validate, info_test, cols = paperData.get_train_validate_test()
@@ -96,7 +93,7 @@ def main(args):
     y_test = tf.one_hot(tf.convert_to_tensor(y_test), 2)
 
     if args.is_sparse:
-        model = PNet(cols, cols, 'root_to_leaf', 'tanh', 'softmax', 0, True, False, 'lecun_uniform')
+        model = PNet(cols, cols, 'root_to_leaf', 'tanh', 'sigmoid', 0, True, False)
     else:
         model = Dense(len(cols))
 
@@ -117,7 +114,7 @@ def main(args):
     #USING CROSS VAL:
     for epoch_id in tqdm(range(args.num_epochs)):
         ac0, ac1, epoch_loss = cv(5, model, args.is_sparse, x_train, y_train, x_validate, y_validate, args.batch_size)
-        print(f"Average F1 Score for class 0 is {round(ac0, 4)} and for class 1 is {round(ac1, 4)}")
+        print(f"Average F1 Score for class 0 is {round(ac0.numpy(), 4)} and for class 1 is {round(ac1.numpy(), 4)}")
         losses.extend(epoch_loss)
 
     test_f1 = test_model(model, args.is_sparse, x_test, y_test)
