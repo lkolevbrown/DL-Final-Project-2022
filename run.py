@@ -33,9 +33,9 @@ def train_model(model, is_sparse, inputs, labels, batch_size):
 
         with tf.GradientTape() as tape:
             if is_sparse:
-                _, outcomes = model(x_batch)
+                _, outcomes = model(x_batch,training=True)
             else:
-                outcomes = model(x_batch)
+                outcomes = model(x_batch,training=True)
             loss = model.loss(outcomes, y_batch)
             total_loss = total_loss + loss
 
@@ -63,20 +63,24 @@ def test_model(model, is_sparse, inputs, labels):
     print(f"F1 Score: {f1_score}")
     return f1.result().numpy() 
 
-def cv(k_fold_num, model, is_sparse, inputs, labels, batch_size):
+def cv(k_fold_num, model, is_sparse, inputs_train, labels_train, inputs_validate, labels_validate, batch_size):
     kfold = KFold(n_splits = k_fold_num, shuffle=True)
     # check iteration of the fold
     acc_list_0 = []
     acc_list_1 = []
     fold_no = 0
-    for train, test in kfold.split(inputs, labels):
-        train_model(model,is_sparse,tf.gather(inputs,train),tf.gather(labels,train), batch_size)
-        accuracies = test_model(model,is_sparse,tf.gather(inputs,test),tf.gather(labels,test))
+    losses = []
+    for train, test in kfold.split(inputs_train, labels_train):
+        loss = train_model(model,is_sparse,tf.gather(inputs_train,train),tf.gather(labels_train,train), batch_size)
+        losses.append(loss)
+        accuracies = test_model(model,is_sparse,tf.gather(inputs_train,test),tf.gather(labels_train,test))
         acc_list_0.append(accuracies[0])
         acc_list_1.append(accuracies[1])
         fold_no += 1
+        validation_score = test_model(model, is_sparse, inputs_validate, labels_validate)
+        print(f"Validation F1 Score: {validation_score}")
     
-    return tf.reduce_mean(tf.constant(acc_list_0)),tf.reduce_mean(tf.constant(acc_list_1)) 
+    return tf.reduce_mean(tf.constant(acc_list_0)),tf.reduce_mean(tf.constant(acc_list_1)), losses
 
 def main(args):
     paperData = ProstateDataPaper(data_type='mut_important')
@@ -84,16 +88,19 @@ def main(args):
     #x = tf.convert_to_tensor(x)
     #response = tf.one_hot(tf.convert_to_tensor(response), 2)
 
-    x, y, info, cols = paperData.get_data()
-    y = tf.one_hot(tf.convert_to_tensor(y), 2)
-    #x_train, x_validate, x_test, y_train, y_validate, y_test, info_train, info_validate, info_test, columns = paperData.get_train_validate_test()
+    #x, y, info, cols = paperData.get_data()
+    #y = tf.one_hot(tf.convert_to_tensor(y), 2)
+    x_train, x_validate, x_test, y_train, y_validate, y_test, info_train, info_validate, info_test, cols = paperData.get_train_validate_test()
+    y_train = tf.one_hot(tf.convert_to_tensor(y_train), 2)
+    y_validate = tf.one_hot(tf.convert_to_tensor(y_validate), 2)
+    y_test = tf.one_hot(tf.convert_to_tensor(y_test), 2)
 
     if args.is_sparse:
         model = PNet(cols, cols, 'root_to_leaf', 'tanh', 'softmax', 0, True, False, 'lecun_uniform')
     else:
         model = Dense(len(cols))
 
-    #losses = []
+    losses = []
 
     #THIS IS A MANUAL TRAINING ROUTINE
     # Train VAE
@@ -108,9 +115,14 @@ def main(args):
     # print(losses)
 
     #USING CROSS VAL:
-    ac0, ac1 = cv(5, model, args.is_sparse, x, y, args.batch_size)
-    print(f"Average F1 Score for class 0 is {ac0} and for class 1 is {ac1}")
+    for epoch_id in tqdm(range(args.num_epochs)):
+        ac0, ac1, epoch_loss = cv(5, model, args.is_sparse, x_train, y_train, x_validate, y_validate, args.batch_size)
+        print(f"Average F1 Score for class 0 is {round(ac0, 4)} and for class 1 is {round(ac1, 4)}")
+        losses.extend(epoch_loss)
 
+    test_f1 = test_model(model, args.is_sparse, x_test, y_test)
+    print(f"Testing F1 Score for class 0 is {round(test_f1[0], 4)} and for class 1 is {round(test_f1[1], 4)}")
+    print(f"Losses across the entire training rountine: {losses}")
 
 if __name__ == "__main__":
     args = parseArguments()

@@ -188,7 +188,7 @@ class PNet(tf.keras.Model):
         decision_outcome = self.decision1(outcome)
         decision_outcomes.append(decision_outcome)
         if (training):
-            outcome = self.dec_drop1(outcome, training=dropout_testing)
+            outcome = self.dec_drop1(outcome, training=training)
 
         #hidden block 2
         outcome = self.hidden_layer2(outcome)
@@ -196,7 +196,7 @@ class PNet(tf.keras.Model):
         decision_outcome = self.decision2(outcome)
         decision_outcomes.append(decision_outcome)
         if (training):
-            outcome = self.dec_drop2(outcome, training=dropout_testing)
+            outcome = self.dec_drop2(outcome, training=training)
 
         #hidden block 3
         outcome = self.hidden_layer3(outcome)
@@ -204,7 +204,7 @@ class PNet(tf.keras.Model):
         decision_outcome = self.decision3(outcome)
         decision_outcomes.append(decision_outcome)
         if (training):
-            outcome = self.dec_drop3(outcome, training=dropout_testing)
+            outcome = self.dec_drop3(outcome, training=training)
 
         #hidden block 4
         outcome = self.hidden_layer4(outcome)
@@ -212,7 +212,7 @@ class PNet(tf.keras.Model):
         decision_outcome = self.decision4(outcome)
         decision_outcomes.append(decision_outcome)
         if (training):
-            outcome = self.dec_drop4(outcome, training=dropout_testing)
+            outcome = self.dec_drop4(outcome, training=training)
 
         #hidden block 5
         outcome = self.hidden_layer5(outcome)
@@ -220,7 +220,7 @@ class PNet(tf.keras.Model):
         decision_outcome = self.decision5(outcome)
         decision_outcomes.append(decision_outcome)
         if (training):
-            outcome = self.dec_drop5(outcome, training=dropout_testing)
+            outcome = self.dec_drop5(outcome, training=training)
 
         return outcome, decision_outcomes
 

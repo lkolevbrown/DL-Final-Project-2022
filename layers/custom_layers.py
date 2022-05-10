@@ -98,13 +98,6 @@ class SparseTF(Layer):
 
     def build(self, input_shape):
         input_dim = input_shape[1]
-        # random sparse constarints on the weights
-        # if self.map is None:
-        #     mapp = np.random.rand(input_dim, self.units)
-        #     mapp = mapp > 0.9
-        #     mapp = mapp.astype(np.float32)
-        #     self.map = mapp
-        # else:
         if not self.map is None:
             self.map = self.map.astype(np.float32)
 
