@@ -25,7 +25,6 @@ class GMT():
                     data_dict_list.append(dict)
 
         df = pd.DataFrame(data_dict_list)
-        # print df.head()
 
         return df
 
