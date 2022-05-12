@@ -11,7 +11,6 @@ processed_path = join(PROSTATE_DATA_PATH, 'processed')
 """
 patient profiles
 """
-# use this one
 gene_final_no_silent_no_intron = 'P1000_final_analysis_set_cross__no_silent_no_introns_not_from_the_paper.csv'
 cnv_filename = 'P1000_data_CNA_paper.csv'
 gene_important_mutations_only = 'P1000_final_analysis_set_cross_important_only.csv'
@@ -27,9 +26,6 @@ fusions_genes_filename = 'fusion_genes.csv'
 patient responses
 """
 response_filename = 'response_paper.csv' #patient responses (i.e. labels, yes or no cancer)
-
-cached_data = {}
-
 
 """
 This method is used to load patient molecular profile data into pandas dataframes.
@@ -51,8 +47,6 @@ def load_data(filename, selected_genes=None):
 
     filename = join(processed_path, filename) # put the file into the processed folder
     logging.info('loading data from %s,' % filename)
-
-    #NOTE:DISABLE CACHING FOR NOW
 
     data = pd.read_csv(filename, index_col=0) #pandas dataframe, first row is a column row
     logging.info(data.shape)

@@ -78,6 +78,9 @@ def test_model(model, is_sparse, f1, acc, inputs, labels, validation=False):
     if not validation:
         print(f"F1 Score: {f1_score}")
         print(f"Accuracy: {acc_score}")
+
+    f1.reset_state()
+    acc.reset_state()
     return f1_score, acc_score
 
 def cv(k_fold_num, model, is_sparse, f1, acc, inputs_train, labels_train, batch_size):
