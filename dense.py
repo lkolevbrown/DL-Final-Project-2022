@@ -6,7 +6,7 @@ import tensorflow as tf
 class Dense(tf.keras.Model):
     def __init__(self, num_cols):
         super(Dense, self).__init__()
-        self.learning_rate = 0.1
+        self.learning_rate = 0.01
         self.optimizer = tf.keras.optimizers.Adam(self.learning_rate)
 
         self.dense = tf.keras.Sequential([

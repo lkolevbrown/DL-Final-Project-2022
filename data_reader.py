@@ -104,22 +104,6 @@ def load_TMB(filename=gene_final_no_silent_no_intron):
     cols = np.array(['TMB']) #create a new column 'TMB'
     return x, response, samples, cols
 
-"""
-CNV: Copy Number Variation
-Same thing but with different data?? I don't really know
-"""
-def load_CNV_burden(filename=gene_final_no_silent_no_intron):
-    x, response, samples, genes = load_data(filename)
-    x = np.sum(x, axis=1)
-    x = np.array(x)
-    x = np.log(1. + x)
-    n = x.shape[0]
-    response = response.values.reshape((n, 1))
-    samples = np.array(samples)
-    cols = np.array(['TMB'])
-    return x, response, samples, cols
-
-
 def load_data_type(data_type='gene', cnv_levels=5, cnv_filter_single_event=True, mut_binary=False, selected_genes=None):
     logging.info('loading {}'.format(data_type))
     if data_type == 'TMB':
@@ -228,12 +212,11 @@ class ProstateDataPaper():
                  selected_genes=None, combine_type='intersection',
                  use_coding_genes_only=False, drop_AR=False,
                  balanced_data=False, cnv_split=False,
-                 shuffle=False, selected_samples=None, training_split=0):
+                 shuffle=False, selected_samples=None):
 
         """
         THIS IS ALL PREPROCESSING
         """
-        self.training_split = training_split
         """
         GET SELECTED GENES
         """
@@ -375,7 +358,7 @@ class ProstateDataPaper():
         return self.x, self.y, self.info, self.columns
 
     """
-    Get training, validation, and testing splits
+    Get training and testing splits
     """
     def get_train_validate_test(self):
         info = self.info
@@ -387,36 +370,27 @@ class ProstateDataPaper():
         splits_path = join(PROSTATE_DATA_PATH, 'splits')
 
         #assuming that there are csv files containing the id's of the samples desired for the training, validation and testing sets
-        training_file = 'training_set_{}.csv'.format(self.training_split)
-        training_set = pd.read_csv(join(splits_path, training_file))
-
-        validation_set = pd.read_csv(join(splits_path, 'validation_set.csv'))
         testing_set = pd.read_csv(join(splits_path, 'test_set.csv'))
 
         #use set intersection to get desired training, validation, and testing samples
         #use list for slicing
-        info_train = list(set(info).intersection(training_set.id))
-        info_validate = list(set(info).intersection(validation_set.id))
+        info_train = list(set(info).difference(testing_set.id))
         info_test = list(set(info).intersection(testing_set.id))
 
         #get indices
         ind_train = info.isin(info_train)
-        ind_validate = info.isin(info_validate)
         ind_test = info.isin(info_test)
 
         #split patient data
         x_train = x[ind_train]
         x_test = x[ind_test]
-        x_validate = x[ind_validate]
 
         #split patient labels
         y_train = y[ind_train]
         y_test = y[ind_test]
-        y_validate = y[ind_validate]
 
         #split patient id's
         info_train = info[ind_train]
         info_test = info[ind_test]
-        info_validate = info[ind_validate]
 
-        return x_train, x_validate, x_test, y_train, y_validate, y_test, info_train.copy(), info_validate, info_test.copy(), columns
+        return x_train, x_test, y_train, y_test, info_train.copy(), info_test.copy(), columns
